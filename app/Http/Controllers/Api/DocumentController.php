@@ -1,27 +1,32 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api;
 
+use App\Enums\StatusEnum;
+use Illuminate\Http\Response;
+use Illuminate\Http\JsonResponse;
+use App\Services\DocumentService;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\{DocumentCollection, DocumentResource};
-use App\Models\Document;
-use Illuminate\Http\{JsonResponse, Request};
-use Illuminate\Support\Str;
+use App\Http\Requests\DocumentRequest;
+use App\Http\Resources\DocumentResource;
+use App\Http\Resources\DocumentCollection;
 
 class DocumentController extends Controller
 {
+    public function __construct(
+       private DocumentService $documentService,
+    ) {
+    }
+
     /**
      * Метод создает новый документ
-     *
-     * @param Document $document
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function createDocument(Document $document): JsonResponse
+    public function createDocument(): JsonResponse
     {
-        $document->id = Str::uuid();
-        $document->status = 'draft';
-
-        $document->save();
+        $document = $this->documentService
+            ->createDocument();
 
         return response()->json([
             'document' => new DocumentResource($document)
@@ -30,18 +35,15 @@ class DocumentController extends Controller
 
     /**
      * Метод получает документ по id
-     *
-     * @param string $id
-     * @return JsonResponse
      */
     public function getDocumentById(string $id): JsonResponse
     {
-        $document = Document::find($id);
+        $document = $this->documentService->findByUuid($id);
 
         if (!$document) {
             return response()->json([
                 'error' => 'Нет такого документа'
-            ], 404);
+            ], Response::HTTP_NOT_FOUND);
         }
 
         return response()->json([
@@ -51,34 +53,24 @@ class DocumentController extends Controller
 
     /**
      * Метод редактирует выбранный документ
-     *
-     * @param Request $request
-     * @param string $id
-     * @return JsonResponse
      */
-    public function editDocument(Request $request, string $id): JsonResponse
+    public function editDocument(DocumentRequest $request, string $id): JsonResponse
     {
-        $document = Document::find($id);
+        $document = $this->documentService->findByUuid($id);
 
         if (!$document) {
             return response()->json([
                 'error' => 'Нет такого документа'
-            ], 404);
+            ], Response::HTTP_NOT_FOUND);
         }
 
-        if ($document->status === Document::STATUS_PUBLISHED) {
+        if ($document->status === StatusEnum::STATUS_PUBLISHED) {
             return response()->json([
                 'message' => 'Документ опубликован'
-            ], 400);
+            ], Response::HTTP_BAD_REQUEST);
         }
 
-        $document->payload = json_decode($request->getContent(), true);
-
-        if (!$document->payload) {
-            return response()->json([
-                'message' => 'Данные не переданны'
-            ], 400);
-        }
+        $document->payload = json_decode($request->getPayload(), true);
 
         $document->save();
 
@@ -89,21 +81,18 @@ class DocumentController extends Controller
 
     /**
      * Метод меняет status на published
-     *
-     * @param string $id
-     * @return JsonResponse
      */
     public function updatePublishedDocument(string $id): JsonResponse
     {
-        $document = Document::find($id);
+        $document = $this->documentService->findByUuid($id);
 
-        if ($document->status === Document::STATUS_PUBLISHED) {
+        if ($document->status === StatusEnum::STATUS_PUBLISHED) {
             return response()->json([
                 'message' => 'Документ опубликован'
             ]);
         }
 
-        $document->status = Document::STATUS_PUBLISHED;
+        $document->status = StatusEnum::STATUS_PUBLISHED;
 
         $document->update();
 
@@ -114,12 +103,9 @@ class DocumentController extends Controller
 
     /**
      * Метод возвращает коллекцию докуметов с показом 1 документа
-     *
-     * @param Document $document
-     * @return DocumentCollection
      */
-    public function documentGetAll(Document $document): DocumentCollection
+    public function documentGetAll(): DocumentCollection
     {
-        return new DocumentCollection($document->orderByDesc('created_at')->paginate(1));
+        return new DocumentCollection($this->documentService->getAll());
     }
 }

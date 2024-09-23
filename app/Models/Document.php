@@ -1,15 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use DateTime;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * @property string id
+ * @property string status
+ * @property array payload
+ * @property DateTime created_at
+ * @property DateTime updated_at
+ */
 class Document extends Model
 {
     use HasFactory;
-
-    const STATUS_PUBLISHED = 'published';
 
     protected $casts = ['id' => 'string'];
 
