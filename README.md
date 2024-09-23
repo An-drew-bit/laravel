@@ -7,13 +7,14 @@
 4. docker-compose exec app bash
 5. composer install
 6. sudo chmod -R 777 storage/
+7. php artisan key:genetrate
 ```
 
 ##### Использование
 
 После запуска контейнеров api будет доступно по адресу
 
-http://localhost::8080
+http://localhost:8080
 
 ##### Запуск конейнеров
 
